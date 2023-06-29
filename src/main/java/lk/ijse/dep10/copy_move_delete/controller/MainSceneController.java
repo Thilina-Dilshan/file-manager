@@ -15,32 +15,32 @@ import java.util.Optional;
 
 public class MainSceneController {
 
-    @FXML
-    private Button btnCopy;
+     
+    public Button btnCopy;
 
-    @FXML
-    private Button btnDelete;
+     
+    public Button btnDelete;
 
-    @FXML
-    private Button btnMove;
+     
+    public Button btnMove;
 
-    @FXML
-    private Button btnSourceOpen;
+     
+    public Button btnSourceOpen;
 
-    @FXML
-    private Button btnTargetOpen;
+     
+    public Button btnTargetOpen;
 
-    @FXML
-    private Label lblProgress;
+     
+    public Label lblProgress;
 
-    @FXML
-    private ProgressBar prg;
+     
+    public ProgressBar prg;
 
-    @FXML
-    private TextField txtSource;
+     
+    public TextField txtSource;
 
-    @FXML
-    private TextField txtTarget;
+     
+    public TextField txtTarget;
 
     private File targetFolder;
 
@@ -59,13 +59,14 @@ public class MainSceneController {
     private FileInputStream fis = null;
     private FileOutputStream fos = null;
     private boolean isCopying;
+    private boolean isMoving;
 
     public void initialize() {
         btnSourceOpen.requestFocus();
     }
 
-    @FXML
-    void btnSourceOpenOnAction(ActionEvent event) throws Exception {
+     
+    public void btnSourceOpenOnAction(ActionEvent event) throws Exception {
         txtSource.clear();
         chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
@@ -85,8 +86,8 @@ public class MainSceneController {
         txtTarget.setText(targetFolder.getAbsolutePath());
     }
 
-    @FXML
-    void btnCopyOnAction(ActionEvent event) throws Exception {
+     
+    public void btnCopyOnAction(ActionEvent event) throws Exception {
         if (!(checkingInitialSteps("Copying"))) return;
         Task<Void> task =new Task<Void>() {
             @Override
@@ -170,6 +171,7 @@ public class MainSceneController {
                 case "Copying":
                     isCopying = true; break;
                 default:
+                    isMoving = true;
             }
             findFiles(sourceFile);
         } else {
@@ -243,7 +245,7 @@ public class MainSceneController {
     }
 
 
-    private void deleteForReplacing(File selectedFile) {
+     private void deleteForReplacing(File selectedFile) {
         System.out.println(selectedFile.getAbsolutePath());
         if (selectedFile.isDirectory()) {
             findFilesForDelete(selectedFile);
@@ -256,7 +258,7 @@ public class MainSceneController {
 
     }
 
-    private void findFilesForDelete(File targetFolder) {
+     private void findFilesForDelete(File targetFolder) {
         File[] files = targetFolder.listFiles();
 
         for (File file : files) {
@@ -268,7 +270,7 @@ public class MainSceneController {
         }
     }
 
-    private void findFiles(File selectedFile) {
+     private void findFiles(File selectedFile) {
         File[] files = selectedFile.listFiles();
         int sub = sourceFile.getAbsolutePath().length();
 
@@ -281,6 +283,9 @@ public class MainSceneController {
                 if (isCopying){
 //                    System.out.println("Directory =>\t" +temp.getAbsolutePath());
                     continue;
+                }else if (isMoving) {
+                    temp.mkdirs();
+                    //if any moving logic available
                 }
             }
             sourceFilesArrayList.add(file);
@@ -290,7 +295,7 @@ public class MainSceneController {
         }
     }
 
-    private void clearAndReadyForNext() {
+     private void clearAndReadyForNext() {
         lblProgress.textProperty().unbind();
         prg.progressProperty().unbind();
         lblProgress.setText("0% complete");
@@ -303,16 +308,44 @@ public class MainSceneController {
         targetFolder = null;
     }
 
-    @FXML
-    void btnMoveOnAction(ActionEvent event) {
+     
+    public void btnMoveOnAction(ActionEvent event) {
+        if (targetFolder == null || sourceFile ==null) return;
+        if (!(checkReplacingReqOfDirectory())) return;
+        if (sourceFile.isDirectory()) {
+            copyingToDirectory.mkdir();
+            isMoving=true;
+            findFiles(sourceFile);
+        } else {
+            sourceFilesArrayList.add(sourceFile);
+            targetFilesArrayList.add(copyingToDirectory);
+        }
+
+        for (int i = 0; i < sourceFilesArrayList.size(); i++) {
+            if ((!sourceFilesArrayList.get(i).getAbsolutePath().equals(targetFilesArrayList.get(i).getAbsolutePath()))) {
+                File oldFile = sourceFilesArrayList.get(i);
+                File newFile = targetFilesArrayList.get(i);
+                oldFile.renameTo(newFile);
+                if (oldFile.isDirectory()) {
+                    System.out.println(oldFile.delete());
+                }
+            }
+        }
+        if ((!(sourceFile.getAbsolutePath().equals(copyingToDirectory.getAbsolutePath())))) {
+            sourceFile.delete();
+        }
+        lblProgress.setText("100% complete");
+        prg.setProgress(1);
+        showCompletedAlert("Moving");
+        isMoving = false;
+        clearAndReadyForNext();
+    }
+
+     public void btnDeleteOnAction(ActionEvent actionEvent) {
 
     }
 
-    public void btnDeleteOnAction(ActionEvent actionEvent) {
-
-    }
-
-    private void showCompletedAlert(String info) {
+     private void showCompletedAlert(String info) {
         new Alert(Alert.AlertType.INFORMATION, String.format("%s is finished!",info)).showAndWait();
     }
 
